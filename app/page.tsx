@@ -67,7 +67,6 @@ export default function Home() {
         flexDirection: 'column',
         justifyContent: 'center',
         padding: '60px 48px',
-        maxWidth: '780px',
       }}>
         <h1 style={{
           fontSize: '2.4rem',

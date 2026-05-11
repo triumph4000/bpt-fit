@@ -4,6 +4,32 @@ import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ResearchResult } from '@/lib/types';
 
+function getCacheKey(domain: string) {
+  return `bpt-result-${domain}`;
+}
+
+function loadFromCache(domain: string): ResearchResult | null {
+  try {
+    const cached = localStorage.getItem(getCacheKey(domain));
+    return cached ? JSON.parse(cached) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveToCache(domain: string, data: ResearchResult) {
+  try {
+    localStorage.setItem(getCacheKey(domain), JSON.stringify(data));
+  } catch {
+    // localStorage full — clear oldest results and try again
+    const keys = Object.keys(localStorage).filter(k => k.startsWith('bpt-result-'));
+    if (keys.length > 0) {
+      localStorage.removeItem(keys[0]);
+      try { localStorage.setItem(getCacheKey(domain), JSON.stringify(data)); } catch { /* give up */ }
+    }
+  }
+}
+
 export default function ResearchPage() {
   const params = useParams();
   const router = useRouter();
@@ -11,12 +37,23 @@ export default function ResearchPage() {
 
   const [result, setResult] = useState<ResearchResult | null>(null);
   const [loading, setLoading] = useState(true);
+  const [fromCache, setFromCache] = useState(false);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     async function fetchResearch() {
+      // Check cache first
+      const cached = loadFromCache(domain);
+      if (cached) {
+        setResult(cached);
+        setFromCache(true);
+        setLoading(false);
+        return;
+      }
+
+      // No cache — run fresh search
       try {
         setLoading(true);
         const response = await fetch('/api/research', {
@@ -32,6 +69,10 @@ export default function ResearchPage() {
 
         const data: ResearchResult = await response.json();
         setResult(data);
+        setFromCache(false);
+
+        // Save full result to cache
+        saveToCache(domain, data);
 
         // Save to search history
         const saved = localStorage.getItem('bpt-search-history');
@@ -42,7 +83,7 @@ export default function ResearchPage() {
           searchedAt: new Date().toISOString(),
         };
         const filtered = history.filter((h: { domain: string }) => h.domain !== domain);
-        localStorage.setItem('bpt-search-history', JSON.stringify([newEntry, ...filtered].slice(0, 10)));
+        localStorage.setItem('bpt-search-history', JSON.stringify([newEntry, ...filtered].slice(0, 25)));
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Something went wrong');
       } finally {
@@ -52,6 +93,16 @@ export default function ResearchPage() {
 
     fetchResearch();
   }, [domain]);
+
+  function handleRefresh() {
+    localStorage.removeItem(getCacheKey(domain));
+    setFromCache(false);
+    setResult(null);
+    setLoading(true);
+    setError('');
+    // Re-trigger the effect by reloading
+    window.location.reload();
+  }
 
   function buildEmailText(): string {
     if (!result) return '';
@@ -119,8 +170,7 @@ export default function ResearchPage() {
   if (!result) return null;
 
   const { basicInfo, recentIntelligence, competitors, recommendations, confidenceLevel, researchDate } = result;
-
-  const confidenceColor = confidenceLevel === 'High' ? '#17C662' : confidenceLevel === 'Medium' ? '#003B5C' : '#003B5C';
+  const confidenceColor = confidenceLevel === 'High' ? '#17C662' : '#003B5C';
 
   return (
     <div ref={printRef} style={{ padding: '40px 20px', background: '#ffffff' }}>
@@ -128,14 +178,27 @@ export default function ResearchPage() {
 
         {/* Top Actions Bar */}
         <div className="no-print" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '32px', flexWrap: 'wrap', gap: '12px' }}>
-          <button
-            onClick={() => router.push('/')}
-            className="btn-primary"
-          >
+          <button onClick={() => router.push('/')} className="btn-primary">
             ← Back to Home
           </button>
-          <button className="btn-primary" onClick={handlePrint}>Export to PDF</button>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            {fromCache && (
+              <button onClick={handleRefresh} className="btn-green">
+                Run Fresh Search
+              </button>
+            )}
+            <button className="btn-primary" onClick={handlePrint}>Export to PDF</button>
+          </div>
         </div>
+
+        {/* Cached notice */}
+        {fromCache && (
+          <div style={{ background: '#EEEEEE', borderRadius: '16px', padding: '12px 20px', marginBottom: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+            <span style={{ color: '#003B5C', fontSize: '1rem' }}>
+              Showing saved results from {researchDate}. Click <strong>Run Fresh Search</strong> to pull new data.
+            </span>
+          </div>
+        )}
 
         {/* Company Name + Meta */}
         <div style={{ marginBottom: '40px' }}>
@@ -172,7 +235,6 @@ export default function ResearchPage() {
               )}
             </div>
 
-            {/* Key Executives */}
             {basicInfo.executives && basicInfo.executives.length > 0 && (
               <div style={{ marginTop: '28px', paddingTop: '24px', borderTop: '2px solid #EEEEEE' }}>
                 <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#003B5C', marginBottom: '16px' }}>
@@ -183,7 +245,7 @@ export default function ResearchPage() {
                     <div key={i}>
                       <div style={{ fontWeight: 700, color: '#003B5C', fontSize: '1rem' }}>{exec.name}</div>
                       <div style={{ color: '#17C662', fontSize: '1rem', fontWeight: 600 }}>{exec.title}</div>
-                      {exec.linkedinUrl && (
+                      {exec.linkedinUrl && exec.linkedinUrl !== 'Not publicly available' && (
                         <a href={exec.linkedinUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#003B5C', fontSize: '1rem' }}>
                           LinkedIn →
                         </a>
@@ -204,24 +266,22 @@ export default function ResearchPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {recentIntelligence.map((item, i) => (
               <div key={i} className="bpt-card">
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '1rem', fontWeight: 700, color: '#17C662', marginBottom: '6px' }}>
-                      {item.category}
-                      {item.date && <span style={{ color: '#003B5C', fontWeight: 400, marginLeft: '12px' }}>{item.date}</span>}
-                    </div>
-                    <div style={{ fontWeight: 700, color: '#003B5C', fontSize: '1.1rem', marginBottom: '8px' }}>
-                      {item.headline}
-                    </div>
-                    <div style={{ color: '#003B5C', fontSize: '1rem', lineHeight: 1.6 }}>
-                      {item.summary}
-                    </div>
-                    {item.sourceUrl && (
-                      <a href={item.sourceUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#17C662', fontSize: '1rem', marginTop: '8px', display: 'inline-block', fontWeight: 600 }}>
-                        View source →
-                      </a>
-                    )}
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '1rem', fontWeight: 700, color: '#17C662', marginBottom: '6px' }}>
+                    {item.category}
+                    {item.date && <span style={{ color: '#003B5C', fontWeight: 400, marginLeft: '12px' }}>{item.date}</span>}
                   </div>
+                  <div style={{ fontWeight: 700, color: '#003B5C', fontSize: '1.1rem', marginBottom: '8px' }}>
+                    {item.headline}
+                  </div>
+                  <div style={{ color: '#003B5C', fontSize: '1rem', lineHeight: 1.6 }}>
+                    {item.summary}
+                  </div>
+                  {item.sourceUrl && (
+                    <a href={item.sourceUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#17C662', fontSize: '1rem', marginTop: '8px', display: 'inline-block', fontWeight: 600 }}>
+                      View source →
+                    </a>
+                  )}
                 </div>
               </div>
             ))}
@@ -257,17 +317,9 @@ export default function ResearchPage() {
               <div key={i} className="bpt-card">
                 <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px', gap: '14px' }}>
                   <div style={{
-                    width: '36px',
-                    height: '36px',
-                    background: '#17C662',
-                    borderRadius: '50%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#ffffff',
-                    fontWeight: 700,
-                    fontSize: '1rem',
-                    flexShrink: 0,
+                    width: '36px', height: '36px', background: '#17C662', borderRadius: '50%',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: '#ffffff', fontWeight: 700, fontSize: '1rem', flexShrink: 0,
                   }}>
                     {i + 1}
                   </div>
@@ -275,32 +327,17 @@ export default function ResearchPage() {
                     Opportunity {i + 1}
                   </h3>
                 </div>
-
                 <div style={{ marginBottom: '16px' }}>
-                  <div style={{ fontWeight: 700, color: '#17C662', fontSize: '1rem', marginBottom: '6px' }}>
-                    Company Initiative
-                  </div>
-                  <p style={{ color: '#003B5C', fontSize: '1rem', lineHeight: 1.6, margin: 0 }}>
-                    {rec.companyInitiative}
-                  </p>
+                  <div style={{ fontWeight: 700, color: '#17C662', fontSize: '1rem', marginBottom: '6px' }}>Company Initiative</div>
+                  <p style={{ color: '#003B5C', fontSize: '1rem', lineHeight: 1.6, margin: 0 }}>{rec.companyInitiative}</p>
                 </div>
-
                 <div style={{ marginBottom: '16px' }}>
-                  <div style={{ fontWeight: 700, color: '#17C662', fontSize: '1rem', marginBottom: '6px' }}>
-                    Bridgepointe Solution
-                  </div>
-                  <p style={{ color: '#003B5C', fontSize: '1rem', lineHeight: 1.6, margin: 0 }}>
-                    {rec.bridgepointeSolution}
-                  </p>
+                  <div style={{ fontWeight: 700, color: '#17C662', fontSize: '1rem', marginBottom: '6px' }}>Bridgepointe Solution</div>
+                  <p style={{ color: '#003B5C', fontSize: '1rem', lineHeight: 1.6, margin: 0 }}>{rec.bridgepointeSolution}</p>
                 </div>
-
                 <div style={{ background: '#EEEEEE', borderRadius: '16px', padding: '16px 20px' }}>
-                  <div style={{ fontWeight: 700, color: '#003B5C', fontSize: '1rem', marginBottom: '8px' }}>
-                    Bullet Point for Email
-                  </div>
-                  <p style={{ color: '#003B5C', fontSize: '1rem', lineHeight: 1.6, margin: 0 }}>
-                    • {rec.bulletPointForEmail}
-                  </p>
+                  <div style={{ fontWeight: 700, color: '#003B5C', fontSize: '1rem', marginBottom: '8px' }}>Bullet Point for Email</div>
+                  <p style={{ color: '#003B5C', fontSize: '1rem', lineHeight: 1.6, margin: 0 }}>• {rec.bulletPointForEmail}</p>
                 </div>
               </div>
             ))}
@@ -314,36 +351,19 @@ export default function ResearchPage() {
           </h2>
           <div className="bpt-card">
             <div style={{
-              background: '#EEEEEE',
-              borderRadius: '16px',
-              padding: '24px',
-              marginBottom: '20px',
-              whiteSpace: 'pre-wrap',
-              lineHeight: 1.8,
-              color: '#003B5C',
-              fontSize: '1rem',
+              background: '#EEEEEE', borderRadius: '16px', padding: '24px', marginBottom: '20px',
+              whiteSpace: 'pre-wrap', lineHeight: 1.8, color: '#003B5C', fontSize: '1rem',
             }}>
               {buildEmailText()}
             </div>
-            <button
-              className="btn-green no-print"
-              onClick={handleCopy}
-              style={{ fontSize: '1rem' }}
-            >
+            <button className="btn-green no-print" onClick={handleCopy} style={{ fontSize: '1rem' }}>
               {copied ? 'Copied!' : 'Copy to Clipboard'}
             </button>
           </div>
         </section>
 
         {/* ── Metadata ── */}
-        <div style={{
-          borderTop: '2px solid #EEEEEE',
-          paddingTop: '24px',
-          marginBottom: '40px',
-          display: 'flex',
-          gap: '32px',
-          flexWrap: 'wrap',
-        }}>
+        <div style={{ borderTop: '2px solid #EEEEEE', paddingTop: '24px', marginBottom: '40px', display: 'flex', gap: '32px', flexWrap: 'wrap' }}>
           <div>
             <span style={{ fontWeight: 700, color: '#003B5C', fontSize: '1rem' }}>Confidence Level: </span>
             <span style={{ fontWeight: 700, color: confidenceColor, fontSize: '1rem' }}>{confidenceLevel}</span>
@@ -356,10 +376,7 @@ export default function ResearchPage() {
 
         {/* Bottom Back to Home */}
         <div className="no-print" style={{ borderTop: '2px solid #EEEEEE', paddingTop: '32px', marginBottom: '40px' }}>
-          <button
-            onClick={() => router.push('/')}
-            className="btn-primary"
-          >
+          <button onClick={() => router.push('/')} className="btn-primary">
             ← Back to Home
           </button>
         </div>
