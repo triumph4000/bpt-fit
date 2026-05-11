@@ -126,17 +126,15 @@ export default function ResearchPage() {
     <div ref={printRef} style={{ padding: '40px 20px', background: '#ffffff' }}>
       <div className="bpt-container">
 
-        {/* Back + Actions Bar */}
+        {/* Top Actions Bar */}
         <div className="no-print" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '32px', flexWrap: 'wrap', gap: '12px' }}>
           <button
             onClick={() => router.push('/')}
-            style={{ background: 'none', border: 'none', color: '#17C662', fontSize: '1rem', fontFamily: 'Mulish, sans-serif', fontWeight: 600, cursor: 'pointer' }}
+            className="btn-primary"
           >
-            ← New Search
+            ← Back to Home
           </button>
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <button className="btn-primary" onClick={handlePrint}>Export to PDF</button>
-          </div>
+          <button className="btn-primary" onClick={handlePrint}>Export to PDF</button>
         </div>
 
         {/* Company Name + Meta */}
@@ -354,6 +352,16 @@ export default function ResearchPage() {
             <span style={{ fontWeight: 700, color: '#003B5C', fontSize: '1rem' }}>Research as of: </span>
             <span style={{ color: '#003B5C', fontSize: '1rem' }}>{researchDate}</span>
           </div>
+        </div>
+
+        {/* Bottom Back to Home */}
+        <div className="no-print" style={{ borderTop: '2px solid #EEEEEE', paddingTop: '32px', marginBottom: '40px' }}>
+          <button
+            onClick={() => router.push('/')}
+            className="btn-primary"
+          >
+            ← Back to Home
+          </button>
         </div>
 
       </div>

@@ -57,15 +57,18 @@ export default function Home() {
     <div style={{
       minHeight: 'calc(100vh - 80px)',
       display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '40px 20px',
       background: '#ffffff',
     }}>
-      <div style={{ maxWidth: '680px', width: '100%' }}>
 
-        {/* Headline */}
+      {/* Left — Search Area */}
+      <div style={{
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        padding: '60px 48px',
+        maxWidth: '780px',
+      }}>
         <h1 style={{
           fontSize: '2.4rem',
           fontWeight: 700,
@@ -84,7 +87,6 @@ export default function Home() {
           Enter a company website to research their business, surface recent intelligence, and generate personalized Bridgepointe recommendations — ready to paste into an email.
         </p>
 
-        {/* Search Form */}
         <form onSubmit={handleSubmit}>
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
             <input
@@ -115,62 +117,73 @@ export default function Home() {
             </p>
           )}
         </form>
+      </div>
 
-        {/* Search History */}
-        {history.length > 0 && (
-          <div style={{ marginTop: '48px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-              <h2 style={{ fontSize: '1.3rem', fontWeight: 700, color: '#003B5C', margin: 0 }}>
-                Recent Searches
-              </h2>
-              <button
-                onClick={clearHistory}
+      {/* Right — Previous Searches Sidebar */}
+      <div style={{
+        width: '360px',
+        flexShrink: 0,
+        background: '#003B5C',
+        padding: '40px 28px',
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: 'calc(100vh - 80px)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+          <h2 style={{ fontSize: '1.4rem', fontWeight: 700, color: '#ffffff', margin: 0 }}>
+            Previous Searches
+          </h2>
+          {history.length > 0 && (
+            <button
+              onClick={clearHistory}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#17C662',
+                fontSize: '1rem',
+                fontFamily: 'Mulish, sans-serif',
+                cursor: 'pointer',
+                fontWeight: 600,
+              }}
+            >
+              Clear all
+            </button>
+          )}
+        </div>
+
+        {history.length === 0 ? (
+          <p style={{ color: '#ffffff', fontSize: '1rem', opacity: 0.7 }}>
+            Your recent company searches will appear here.
+          </p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', overflowY: 'auto' }}>
+            {history.slice(0, 25).map((item, i) => (
+              <a
+                key={i}
+                href={`/research/${encodeURIComponent(item.domain)}`}
                 style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#17C662',
-                  fontSize: '1rem',
-                  fontFamily: 'Mulish, sans-serif',
-                  cursor: 'pointer',
-                  fontWeight: 600,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  padding: '14px 16px',
+                  background: 'rgba(255,255,255,0.08)',
+                  borderRadius: '16px',
+                  textDecoration: 'none',
+                  borderLeft: '3px solid #17C662',
+                  transition: 'background 0.15s',
                 }}
               >
-                Clear history
-              </button>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {history.map((item, i) => (
-                <a
-                  key={i}
-                  href={`/research/${encodeURIComponent(item.domain)}`}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '14px 20px',
-                    background: '#EEEEEE',
-                    borderRadius: '25px',
-                    textDecoration: 'none',
-                    transition: 'background 0.15s',
-                  }}
-                >
-                  <div>
-                    <span style={{ fontWeight: 700, color: '#003B5C', fontSize: '1rem' }}>
-                      {item.companyName || item.domain}
-                    </span>
-                    <span style={{ color: '#17C662', fontSize: '1rem', marginLeft: '10px' }}>
-                      {item.domain}
-                    </span>
-                  </div>
-                  <span style={{ color: '#003B5C', fontSize: '1rem' }}>
-                    {new Date(item.searchedAt).toLocaleDateString()}
-                  </span>
-                </a>
-              ))}
-            </div>
+                <span style={{ fontWeight: 700, color: '#ffffff', fontSize: '1rem', marginBottom: '4px' }}>
+                  {item.companyName || item.domain}
+                </span>
+                <span style={{ color: '#17C662', fontSize: '1rem' }}>
+                  {new Date(item.searchedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                </span>
+              </a>
+            ))}
           </div>
         )}
       </div>
+
     </div>
   );
 }
