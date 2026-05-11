@@ -1,26 +1,126 @@
+@import url('https://fonts.googleapis.com/css2?family=Mulish:wght@400;600;700&display=swap');
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bpt-blue: #003B5C;
+  --bpt-green: #17C662;
+  --bpt-gray-bg: #EEEEEE;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bpt-blue: #003B5C;
+  --color-bpt-green: #17C662;
+  --color-bpt-gray-bg: #EEEEEE;
+  --font-sans: 'Mulish', sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: #ffffff;
+  color: #003B5C;
+  font-family: 'Mulish', sans-serif;
+  font-size: 1rem;
+  min-font-size: 16px;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: #003B5C;
+  font-family: 'Mulish', sans-serif;
+  font-weight: 700;
+}
+
+h1 { font-size: 2.4rem; }
+h2 { font-size: 2rem; }
+h3 { font-size: 1.5rem; font-weight: 600; }
+
+p, span, li, td, th, label, input, textarea {
+  font-size: 1rem;
+  color: #003B5C;
+}
+
+a {
+  color: #17C662;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* Card style */
+.bpt-card {
+  background: #ffffff;
+  border-radius: 25px;
+  box-shadow: 6px 6px 9px rgba(0, 0, 0, 0.2);
+  padding: 24px;
+}
+
+/* Section background */
+.bpt-section-bg {
+  background: #EEEEEE;
+  border-radius: 25px;
+  padding: 24px;
+}
+
+/* Button styles */
+.btn-primary {
+  background: #003B5C;
+  color: #ffffff;
+  border-radius: 25px;
+  padding: 12px 28px;
+  font-family: 'Mulish', sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.btn-primary:hover {
+  opacity: 0.9;
+}
+
+.btn-green {
+  background: #17C662;
+  color: #ffffff;
+  border-radius: 25px;
+  padding: 12px 28px;
+  font-family: 'Mulish', sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.btn-green:hover {
+  opacity: 0.9;
+}
+
+/* Max width container */
+.bpt-container {
+  max-width: 1250px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* Print styles for PDF export */
+@media print {
+  header, .no-print {
+    display: none;
+  }
+  body {
+    background: white;
+  }
+  .bpt-card {
+    box-shadow: none;
+    border: 1px solid #EEEEEE;
+  }
 }
