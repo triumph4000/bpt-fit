@@ -65,25 +65,27 @@ export default function Home() {
         flex: 1,
         display: 'flex',
         flexDirection: 'column',
+        alignItems: 'center',
         justifyContent: 'center',
         padding: '60px 48px',
       }}>
+        <div style={{ width: '100%', maxWidth: '560px' }}>
         <h1 style={{
-          fontSize: '2.4rem',
+          fontSize: '2rem',
           fontWeight: 700,
           color: '#003B5C',
-          marginBottom: '12px',
+          marginBottom: '10px',
           lineHeight: 1.2,
         }}>
           Prospect Research Engine
         </h1>
         <p style={{
-          fontSize: '1.1rem',
+          fontSize: '1rem',
           color: '#003B5C',
-          marginBottom: '40px',
+          marginBottom: '32px',
           lineHeight: 1.6,
         }}>
-          Enter a company website to research their business, surface recent intelligence, and generate personalized Bridgepointe recommendations — ready to paste into an email.
+          Enter a company website to generate personalized Bridgepointe recommendations.
         </p>
 
         <form onSubmit={handleSubmit}>
@@ -116,6 +118,7 @@ export default function Home() {
             </p>
           )}
         </form>
+        </div>
       </div>
 
       {/* Right — Previous Searches Sidebar */}
