@@ -36,7 +36,7 @@ export default function ResearchPage() {
   const domain = decodeURIComponent(params.domain as string);
 
   const [result, setResult] = useState<ResearchResult | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [fromCache, setFromCache] = useState(false);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
@@ -44,12 +44,11 @@ export default function ResearchPage() {
 
   useEffect(() => {
     async function fetchResearch() {
-      // Check cache first
+      // Check cache first — load instantly, no spinner
       const cached = loadFromCache(domain);
       if (cached) {
         setResult(cached);
         setFromCache(true);
-        setLoading(false);
         return;
       }
 
